@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bss.customer.account.AccountMapper">
+
+  <resultMap id="memberMap" type="com.bss.customer.account.Account" autoMapping="true">
+    <id property="accountId" column="ACCOUNT_ID"/>
+    <association property="customer" javaType="com.bss.customer.customer.Customer"
+                 columnPrefix="C_" autoMapping="true" notNullColumn="CUSTOMER_ID"/>
+  </resultMap>
+
+  <sql id="memberColumns">
+    A.*,
+    C.CUSTOMER_ID            AS C_CUSTOMER_ID,
+    C.NAME                   AS C_NAME,
+    C.BIRTH_DATE             AS C_BIRTH_DATE,
+    C.RESIDENT_REG_NO        AS C_RESIDENT_REG_NO,
+    C.PHONE                  AS C_PHONE,
+    C.EMAIL                  AS C_EMAIL,
+    C.ADDRESS                AS C_ADDRESS,
+    C.CREDIT_STATUS          AS C_CREDIT_STATUS,
+    C.COLLECTION_STATUS      AS C_COLLECTION_STATUS,
+    C.ASSIGNED_CONSULTANT_ID AS C_ASSIGNED_CONSULTANT_ID,
+    C.CREATED_AT             AS C_CREATED_AT,
+    C.UPDATED_AT             AS C_UPDATED_AT
+  </sql>
+
+  <select id="findById" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT WHERE ACCOUNT_ID = #{accountId}
+  </select>
+
+  <select id="findByIdForUpdate" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT WHERE ACCOUNT_ID = #{accountId} FOR UPDATE
+  </select>
+
+  <select id="findByIdsForUpdate" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT
+    WHERE ACCOUNT_ID IN
+    <foreach collection="accountIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    FOR UPDATE
+  </select>
+
+  <select id="findByIdListForUpdate" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT WHERE ACCOUNT_ID IN (${idList}) FOR UPDATE
+  </select>
+
+  <select id="findByLoginId" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT WHERE LOGIN_ID = #{loginId}
+  </select>
+
+  <select id="findBySignupRef" resultType="com.bss.customer.account.Account">
+    SELECT * FROM ACCOUNT WHERE SIGNUP_REF = #{signupRef}
+  </select>
+
+  <select id="findMemberById" resultMap="memberMap">
+    SELECT <include refid="memberColumns"/>
+    FROM ACCOUNT A LEFT JOIN CUSTOMER C ON C.CUSTOMER_ID = A.CUSTOMER_ID
+    WHERE A.ACCOUNT_ID = #{accountId}
+  </select>
+
+  <select id="findMemberByCustomerId" resultMap="memberMap">
+    SELECT <include refid="memberColumns"/>
+    FROM ACCOUNT A JOIN CUSTOMER C ON C.CUSTOMER_ID = A.CUSTOMER_ID
+    WHERE A.CUSTOMER_ID = #{customerId}
+  </select>
+
+  <sql id="memberConditions">
+    <where>
+      <if test="search.status != null">AND A.STATUS = #{search.status}</if>
+      <if test="search.role != null">AND A.ROLE = #{search.role}</if>
+      <if test="search.nameLike != null">
+        AND INSTR(COALESCE(C.NAME, A.STAFF_NAME), '${search.nameLike}') > 0
+      </if>
+    </where>
+  </sql>
+
+  <select id="searchMembers" resultMap="memberMap">
+    SELECT <include refid="memberColumns"/>
+    FROM ACCOUNT A LEFT JOIN CUSTOMER C ON C.CUSTOMER_ID = A.CUSTOMER_ID
+    <include refid="memberConditions"/>
+    ORDER BY ${search.sortField}, A.ACCOUNT_ID
+    OFFSET #{search.offset} ROWS FETCH NEXT #{search.size} ROWS ONLY
+  </select>
+
+  <select id="exportMembers" resultMap="memberMap">
+    SELECT <include refid="memberColumns"/>
+    FROM ACCOUNT A LEFT JOIN CUSTOMER C ON C.CUSTOMER_ID = A.CUSTOMER_ID
+    <where>
+      <if test="status != null">AND A.STATUS = #{status}</if>
+      <if test="role != null">AND A.ROLE = #{role}</if>
+    </where>
+    ORDER BY A.CREATED_AT DESC, A.ACCOUNT_ID
+    FETCH FIRST #{limit} ROWS ONLY
+  </select>
+
+  <select id="countMembers" resultType="long">
+    SELECT COUNT(*)
+    FROM ACCOUNT A LEFT JOIN CUSTOMER C ON C.CUSTOMER_ID = A.CUSTOMER_ID
+    <include refid="memberConditions"/>
+  </select>
+
+  <select id="countByLoginId" resultType="int">
+    SELECT COUNT(*) FROM ACCOUNT WHERE LOGIN_ID = #{loginId}
+  </select>
+
+  <insert id="insert" parameterType="com.bss.customer.account.Account">
+    INSERT INTO ACCOUNT (ACCOUNT_ID, LOGIN_ID, CUSTOMER_ID, SIGNUP_REF, PASSWORD_HASH, ROLE, STATUS,
+                         FAILED_LOGIN_COUNT, SESSION_EPOCH, CREATED_AT)
+    VALUES (#{accountId}, #{loginId}, #{customerId}, #{signupRef}, #{passwordHash}, #{role}, #{status},
+            #{failedLoginCount}, #{sessionEpoch}, #{createdAt})
+  </insert>
+
+  <update id="updateStatus">
+    UPDATE ACCOUNT SET STATUS = #{status} WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="suspendByIds">
+    UPDATE ACCOUNT SET STATUS = 'SUSPENDED'
+    WHERE STATUS &lt;&gt; 'DELETED'
+      AND ACCOUNT_ID IN
+      <foreach collection="accountIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </update>
+
+  <update id="releaseLock">
+    UPDATE ACCOUNT SET STATUS = 'ACTIVE', FAILED_LOGIN_COUNT = 0 WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="updateRole">
+    UPDATE ACCOUNT SET ROLE = #{role} WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="activateVerified">
+    UPDATE ACCOUNT SET STATUS = 'ACTIVE', IDENTITY_VERIFIED_AT = #{verifiedAt}
+    WHERE ACCOUNT_ID = #{accountId} AND STATUS = 'PENDING_VERIFICATION'
+  </update>
+
+  <update id="recordLoginSuccess">
+    UPDATE ACCOUNT SET FAILED_LOGIN_COUNT = 0, LAST_LOGIN_AT = #{loginAt} WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="recordLoginFailure">
+    UPDATE ACCOUNT
+    SET FAILED_LOGIN_COUNT = FAILED_LOGIN_COUNT + 1,
+        STATUS = CASE WHEN STATUS = 'ACTIVE' AND FAILED_LOGIN_COUNT + 1 &gt;= #{lockThreshold}
+                      THEN 'LOCKED' ELSE STATUS END
+    WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="updatePassword">
+    UPDATE ACCOUNT SET PASSWORD_HASH = #{passwordHash}, PASSWORD_CHANGED_AT = #{changedAt}
+    WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="updateRoleAndStatus">
+    UPDATE ACCOUNT
+    <set>
+      <if test="role != null">ROLE = #{role},</if>
+      <if test="status != null">STATUS = #{status},</if>
+    </set>
+    WHERE ACCOUNT_ID = #{accountId}
+  </update>
+
+  <update id="endSessions">
+    UPDATE ACCOUNT SET SESSION_EPOCH = SESSION_EPOCH + 1 WHERE ACCOUNT_ID = #{accountId}
+  </update>
+</mapper>

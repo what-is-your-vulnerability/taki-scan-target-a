@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>회원 상세</title>
+</head>
+<body>
+  <h1>회원 상세</h1>
+  <table>
+    <tr><th>계정 ID</th><td id="account-id" th:text="${member.accountId}"></td></tr>
+    <tr><th>로그인 ID</th><td id="login-id" th:text="${member.loginId}"></td></tr>
+    <tr><th>역할</th><td id="role" th:text="${member.role}"></td></tr>
+    <tr><th>상태</th><td id="status" th:text="${member.status}"></td></tr>
+    <tr><th>로그인 실패 횟수</th><td id="failed-login-count" th:text="${member.failedLoginCount}"></td></tr>
+    <tr><th>본인 확인 시각</th><td id="identity-verified-at" th:text="${member.identityVerifiedAt}"></td></tr>
+    <tr><th>마지막 로그인</th><td id="last-login-at" th:text="${member.lastLoginAt}"></td></tr>
+    <tr th:if="${member.staffName != null}"><th>직원 이름</th><td id="staff-name" th:text="${member.staffName}"></td></tr>
+  </table>
+  <table th:if="${member.customer != null}" th:with="customer=${member.customer}">
+    <tr><th>고객 번호</th><td id="customer-id" th:text="${customer.customerId}"></td></tr>
+    <tr><th>이름</th><td id="name" th:utext="${customer.name}"></td></tr>
+    <tr><th>생년월일</th><td id="birth-date" th:text="${customer.birthDate}"></td></tr>
+    <tr><th>연락처</th><td id="phone" th:text="${customer.phone}"></td></tr>
+    <tr><th>이메일</th><td id="email" th:text="${customer.email}"></td></tr>
+    <tr><th>주소</th><td id="address" th:text="${customer.address}"></td></tr>
+    <tr><th>신용 등급</th><td id="credit-status" th:text="${customer.creditStatus}"></td></tr>
+    <tr><th>수납 상태</th><td id="collection-status" th:text="${customer.collectionStatus}"></td></tr>
+    <tr><th>배정 상담원</th><td id="assigned-consultant-id" th:text="${customer.assignedConsultantId}"></td></tr>
+    <tr><th>가입 신청 시각</th><td id="created-at" th:text="${customer.createdAt}"></td></tr>
+  </table>
+</body>
+</html>

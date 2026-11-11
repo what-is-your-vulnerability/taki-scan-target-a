@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bss.customer.audit.AuditMapper">
+  <insert id="insert">
+    INSERT INTO AUDIT_EVENT (EVENT_ID, ACTOR_ID, ACTION, TARGET_TYPE, TARGET_ID, CUSTOMER_ID, REASON, OCCURRED_AT, RESULT, CLIENT_IP)
+    VALUES (SEQ_AUDIT_EVENT.NEXTVAL, #{actorId}, #{action}, #{targetType}, #{targetId}, #{customerId}, #{reason},
+            #{occurredAt}, #{result}, #{clientIp})
+  </insert>
+
+  <sql id="auditConditions">
+    <where>
+      <if test="search.actorId != null">AND ACTOR_ID = #{search.actorId}</if>
+      <if test="search.action != null">AND ACTION = #{search.action}</if>
+      <if test="search.from != null">AND TO_CHAR(OCCURRED_AT, 'YYYY-MM-DD') &gt;= '${search.from}'</if>
+      <if test="search.to != null">AND TO_CHAR(OCCURRED_AT, 'YYYY-MM-DD') &lt;= '${search.to}'</if>
+    </where>
+  </sql>
+
+  <select id="searchEvents" resultType="com.bss.customer.audit.AuditEvent">
+    SELECT * FROM AUDIT_EVENT
+    <include refid="auditConditions"/>
+    ORDER BY
+    <choose>
+      <when test="search.sortField == 'action'">ACTION</when>
+      <when test="search.sortField == 'result'">RESULT</when>
+      <otherwise>OCCURRED_AT</otherwise>
+    </choose>
+    <if test="search.descending">DESC</if>, EVENT_ID
+    OFFSET #{search.offset} ROWS FETCH NEXT #{search.size} ROWS ONLY
+  </select>
+
+  <select id="countEvents" resultType="long">
+    SELECT COUNT(*) FROM AUDIT_EVENT
+    <include refid="auditConditions"/>
+  </select>
+</mapper>

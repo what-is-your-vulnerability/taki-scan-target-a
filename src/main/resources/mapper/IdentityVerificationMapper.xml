@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bss.customer.signup.IdentityVerificationMapper">
+
+  <select id="findById" resultType="com.bss.customer.signup.IdentityVerification">
+    SELECT * FROM IDENTITY_VERIFICATION WHERE VERIFICATION_ID = #{verificationId}
+  </select>
+
+  <select id="countByAgencyResultRef" resultType="int">
+    SELECT COUNT(*) FROM IDENTITY_VERIFICATION WHERE AGENCY_RESULT_REF = #{agencyResultRef}
+  </select>
+
+  <insert id="insert" parameterType="com.bss.customer.signup.IdentityVerification">
+    INSERT INTO IDENTITY_VERIFICATION (VERIFICATION_ID, ACCOUNT_ID, STATUS, EXPIRES_AT, CREATED_AT)
+    VALUES (#{verificationId}, #{accountId}, 'REQUESTED', #{expiresAt}, #{createdAt})
+  </insert>
+
+  <update id="markClosed">
+    UPDATE IDENTITY_VERIFICATION SET STATUS = #{status}
+    WHERE VERIFICATION_ID = #{verificationId} AND STATUS = 'REQUESTED'
+  </update>
+
+  <update id="markCompleted">
+    UPDATE IDENTITY_VERIFICATION
+    SET STATUS = 'COMPLETED', AGENCY_RESULT_REF = #{agencyResultRef}, COMPLETED_AT = #{completedAt}
+    WHERE VERIFICATION_ID = #{verificationId} AND STATUS = 'REQUESTED'
+  </update>
+</mapper>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bss.customer.customer.CustomerMapper">
+
+  <insert id="insert" parameterType="com.bss.customer.customer.Customer">
+    <selectKey keyProperty="customerId" resultType="long" order="BEFORE">
+      SELECT SEQ_CUSTOMER.NEXTVAL FROM DUAL
+    </selectKey>
+    INSERT INTO CUSTOMER (CUSTOMER_ID, NAME, BIRTH_DATE, RESIDENT_REG_NO, PHONE, EMAIL, ADDRESS,
+                          CREDIT_STATUS, COLLECTION_STATUS, CREATED_AT, UPDATED_AT, ASSIGNED_CONSULTANT_ID)
+    VALUES (#{customerId}, #{name}, #{birthDate}, #{residentRegNo}, #{phone}, #{email}, #{address},
+            #{creditStatus}, #{collectionStatus}, #{createdAt}, #{updatedAt}, #{assignedConsultantId})
+  </insert>
+
+  <update id="updateContact">
+    UPDATE CUSTOMER
+    <set>
+      <if test="phone != null">PHONE = #{phone},</if>
+      <if test="email != null">EMAIL = #{email},</if>
+      <if test="address != null">ADDRESS = #{address},</if>
+      UPDATED_AT = #{updatedAt}
+    </set>
+    WHERE CUSTOMER_ID = #{customerId}
+  </update>
+
+  <select id="findAssigned" resultMap="com.bss.customer.account.AccountMapper.memberMap">
+    SELECT <include refid="com.bss.customer.account.AccountMapper.memberColumns"/>
+    FROM CUSTOMER C JOIN ACCOUNT A ON A.CUSTOMER_ID = C.CUSTOMER_ID
+    WHERE C.ASSIGNED_CONSULTANT_ID = #{consultantId} AND A.STATUS &lt;&gt; 'DELETED'
+    ORDER BY C.CUSTOMER_ID
+    OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+  </select>
+
+  <select id="countAssigned" resultType="long">
+    SELECT COUNT(*)
+    FROM CUSTOMER C JOIN ACCOUNT A ON A.CUSTOMER_ID = C.CUSTOMER_ID
+    WHERE C.ASSIGNED_CONSULTANT_ID = #{consultantId} AND A.STATUS &lt;&gt; 'DELETED'
+  </select>
+
+  <sql id="searchConditions">
+    <where>
+      A.STATUS &lt;&gt; 'DELETED'
+      <if test="search.nameLike != null">
+        AND C.ASSIGNED_CONSULTANT_ID = #{search.consultantId}
+        AND C.NAME LIKE '%' || #{search.nameLike} || '%' ESCAPE '\'
+      </if>
+      <if test="search.phoneLike != null">
+        AND REPLACE(C.PHONE, '-', '') LIKE '%' || #{search.phoneLike} || '%' ESCAPE '\'
+      </if>
+    </where>
+  </sql>
+
+  <select id="searchAssigned" resultMap="com.bss.customer.account.AccountMapper.memberMap">
+    SELECT <include refid="com.bss.customer.account.AccountMapper.memberColumns"/>
+    FROM CUSTOMER C JOIN ACCOUNT A ON A.CUSTOMER_ID = C.CUSTOMER_ID
+    <include refid="searchConditions"/>
+    ORDER BY ${search.sortField}, C.CUSTOMER_ID
+    OFFSET #{search.offset} ROWS FETCH NEXT #{search.size} ROWS ONLY
+  </select>
+
+  <select id="countSearchAssigned" resultType="long">
+    SELECT COUNT(*)
+    FROM CUSTOMER C JOIN ACCOUNT A ON A.CUSTOMER_ID = C.CUSTOMER_ID
+    <include refid="searchConditions"/>
+  </select>
+
+  <select id="findAssignedIds" resultType="long">
+    SELECT CUSTOMER_ID FROM CUSTOMER WHERE ASSIGNED_CONSULTANT_ID = #{consultantId}
+  </select>
+
+  <update id="updateAssignedConsultant">
+    UPDATE CUSTOMER SET ASSIGNED_CONSULTANT_ID = #{consultantId}, UPDATED_AT = #{updatedAt}
+    WHERE CUSTOMER_ID = #{customerId}
+  </update>
+
+  <update id="updateInternal">
+    UPDATE CUSTOMER
+    <set>
+      <if test="creditStatus != null">CREDIT_STATUS = #{creditStatus},</if>
+      <if test="collectionStatus != null">COLLECTION_STATUS = #{collectionStatus},</if>
+      <if test="assignedConsultantId != null">ASSIGNED_CONSULTANT_ID = #{assignedConsultantId},</if>
+      UPDATED_AT = #{updatedAt}
+    </set>
+    WHERE CUSTOMER_ID = #{customerId}
+  </update>
+
+  <update id="clearAssignments">
+    UPDATE CUSTOMER SET ASSIGNED_CONSULTANT_ID = NULL, UPDATED_AT = #{updatedAt}
+    WHERE ASSIGNED_CONSULTANT_ID = #{consultantId}
+  </update>
+
+  <select id="countOpenSubscriptions" resultType="int">
+    SELECT COUNT(*) FROM SUBSCRIPTION WHERE CUSTOMER_ID = #{customerId} AND STATUS &lt;&gt; 'TERMINATED'
+  </select>
+</mapper>
