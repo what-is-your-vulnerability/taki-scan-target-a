@@ -8,7 +8,7 @@ public class Customer {
     private Long customerId;
     private String name;
     private LocalDate birthDate;
-    private String residentRegNo;
+    private String ci;
     private String phone;
     private String email;
     private String address;
@@ -24,8 +24,8 @@ public class Customer {
     public void setName(String name) { this.name = name; }
     public LocalDate getBirthDate() { return birthDate; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
-    public String getResidentRegNo() { return residentRegNo; }
-    public void setResidentRegNo(String residentRegNo) { this.residentRegNo = residentRegNo; }
+    public String getCi() { return ci; }
+    public void setCi(String ci) { this.ci = ci; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
     public String getEmail() { return email; }

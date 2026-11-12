@@ -68,11 +68,4 @@ public final class Masking {
         }
         return masked.append("***").toString();
     }
-
-    public static String residentRegNo(String digits) {
-        if (digits == null) {
-            return null;
-        }
-        return digits.substring(0, 6) + "-" + digits.charAt(6) + "******";
-    }
 }

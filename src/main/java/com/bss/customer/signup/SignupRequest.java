@@ -14,7 +14,6 @@ public record SignupRequest(
         @NotBlank @Size(min = 8, max = 72) String password,
         @NotBlank @Size(max = 50) String name,
         @NotNull LocalDate birthDate,
-        @NotBlank @Pattern(regexp = "^\\d{6}-?\\d{7}$") String residentRegNo,
         @NotBlank @Size(max = 20) @Pattern(regexp = ContactRules.PHONE) String phone,
         @NotBlank @Size(max = 100) @Pattern(regexp = ContactRules.EMAIL) String email,
         @NotBlank @Size(max = 200) String address,

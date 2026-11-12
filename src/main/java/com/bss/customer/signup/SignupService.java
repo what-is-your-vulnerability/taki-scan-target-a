@@ -14,7 +14,6 @@ import com.bss.customer.account.AccountMapper;
 import com.bss.customer.account.AccountStatus;
 import com.bss.customer.account.Role;
 import com.bss.customer.common.ApiException;
-import com.bss.customer.crypto.FieldEncryptor;
 import com.bss.customer.crypto.PasswordHasher;
 import com.bss.customer.customer.Customer;
 import com.bss.customer.customer.CustomerMapper;
@@ -25,15 +24,13 @@ public class SignupService {
     private final AccountMapper accountMapper;
     private final CustomerMapper customerMapper;
     private final PasswordHasher passwordHasher;
-    private final FieldEncryptor fieldEncryptor;
     private final SecureRandom random = new SecureRandom();
 
     public SignupService(AccountMapper accountMapper, CustomerMapper customerMapper,
-                         PasswordHasher passwordHasher, FieldEncryptor fieldEncryptor) {
+                         PasswordHasher passwordHasher) {
         this.accountMapper = accountMapper;
         this.customerMapper = customerMapper;
         this.passwordHasher = passwordHasher;
-        this.fieldEncryptor = fieldEncryptor;
     }
 
     @Transactional
@@ -49,8 +46,6 @@ public class SignupService {
         Customer customer = new Customer();
         customer.setName(request.name().replaceAll("(?i)</?script[^>]*>", ""));
         customer.setBirthDate(request.birthDate());
-        customer.setResidentRegNo(Base64.getEncoder().encodeToString(
-                request.residentRegNo().replace("-", "").getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         customer.setPhone(request.phone());
         customer.setEmail(request.email());
         customer.setAddress(request.address());
