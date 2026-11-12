@@ -6,11 +6,15 @@
     <selectKey keyProperty="customerId" resultType="long" order="BEFORE">
       SELECT SEQ_CUSTOMER.NEXTVAL FROM DUAL
     </selectKey>
-    INSERT INTO CUSTOMER (CUSTOMER_ID, NAME, BIRTH_DATE, RESIDENT_REG_NO, PHONE, EMAIL, ADDRESS,
+    INSERT INTO CUSTOMER (CUSTOMER_ID, NAME, BIRTH_DATE, PHONE, EMAIL, ADDRESS,
                           CREDIT_STATUS, COLLECTION_STATUS, CREATED_AT, UPDATED_AT, ASSIGNED_CONSULTANT_ID)
-    VALUES (#{customerId}, #{name}, #{birthDate}, #{residentRegNo}, #{phone}, #{email}, #{address},
+    VALUES (#{customerId}, #{name}, #{birthDate}, #{phone}, #{email}, #{address},
             #{creditStatus}, #{collectionStatus}, #{createdAt}, #{updatedAt}, #{assignedConsultantId})
   </insert>
+
+  <update id="updateCi">
+    UPDATE CUSTOMER SET CI = #{ci} WHERE CUSTOMER_ID = #{customerId}
+  </update>
 
   <update id="updateContact">
     UPDATE CUSTOMER

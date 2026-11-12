@@ -59,7 +59,7 @@
   - 계정: `account_id`, `login_id`, `role`, `status`, `failed_login_count`, `identity_verified_at`, `last_login_at`, `staff_name`(직원 계정).
   - 고객 계정이면 고객: `customer_id`, `name`(원문), `birth_date`·`phone`·`email`·`address`(마스킹), `credit_status`, `collection_status`, `assigned_consultant_id`, `created_at`.
 - 해야 할 일: 고객 계정 조회는 감사 기록을 남긴다.
-- 하면 안 되는 일: `password_hash`, `resident_reg_no`, `name` 외 G4 원문을 담는 것. `DELETED` 계정의 G1·G2·G3 값을 담는 것.
+- 하면 안 되는 일: `password_hash`, `ci`, `name` 외 G4 원문을 담는 것. `DELETED` 계정의 G1·G2·G3 값을 담는 것.
 
 ### 4.3 회원 정지
 
@@ -140,7 +140,7 @@
 
 - 입력: `status`, `role`(회원 목록 조회와 같은 필터, 선택).
 - 해야 할 일: 조건에 맞는 회원(최대 1000건, 가입 최근순, `DELETED` 계정 제외)을 CSV 파일로 내려 준다. 열은 `account_id`, `role`, `customer_id`, `name`(원문), `phone`·`email`(마스킹), `status`뿐이다. 서버는 CSV를 임시 파일에 만든 뒤 응답으로 내리고 임시 파일을 지운다. 내보내기는 감사 기록에 남긴다. 운영 기록(로그)에는 행위자와 건수만 남긴다.
-- 하면 안 되는 일: `phone`·`email` 원문을 CSV나 임시 파일, 운영 기록에 담는 것. 응답 뒤에 임시 파일을 남기는 것. 4.2에서 담지 않는 정보(`resident_reg_no`, `birth_date`, `address`, `password_hash`)를 담는 것.
+- 하면 안 되는 일: `phone`·`email` 원문을 CSV나 임시 파일, 운영 기록에 담는 것. 응답 뒤에 임시 파일을 남기는 것. 4.2에서 담지 않는 정보(`ci`, `birth_date`, `address`, `password_hash`)를 담는 것.
 
 ## 5. 데이터 처리 흐름
 
@@ -195,7 +195,7 @@
 8. 역할 변경은 직원 계정만 대상으로 하고, 값은 `CONSULTANT`, `BILLING_OPERATOR`, `ADMIN`뿐이다. 고객 계정의 역할은 바뀌지 않고, 직원 계정은 `CUSTOMER`가 되지 않는다.
 9. 계정이 정지·삭제되거나 역할이 바뀌면, 그 계정의 기존 로그인 상태는 다음 요청부터 바뀐 값으로 판단되거나 효력을 잃는다.
 10. 목록 응답 항목은 `account_id`, `role`, `customer_id`, `name`, 마스킹된 `phone`, 계정 `status`뿐이다.
-11. 상세 응답은 `birth_date`, `phone`, `email`, `address`를 마스킹 형태로만 담고, `resident_reg_no`와 `password_hash`를 담지 않는다. `DELETED` 계정의 G1·G2·G3은 담지 않는다.
+11. 상세 응답은 `birth_date`, `phone`, `email`, `address`를 마스킹 형태로만 담고, `ci`와 `password_hash`를 담지 않는다. `DELETED` 계정의 G1·G2·G3은 담지 않는다.
 12. 목록의 `sort`는 정해진 값만 받고, `name` 검색어는 이름 부분 일치로만 해석한다. 검색어나 정렬 값이 다른 조건·다른 회원 정보 반환·데이터 변경으로 이어지지 않는다.
 13. 상담원 배정 대상은 `ACTIVE` 상태의 `CONSULTANT` 계정뿐이고, 고객마다 최대 한 명이다.
 14. 배정이 바뀌면 이전 상담원은 다음 요청부터 그 고객을 조회·수정할 수 없다.

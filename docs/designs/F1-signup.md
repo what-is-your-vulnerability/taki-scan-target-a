@@ -25,7 +25,7 @@
 
 | 자산 | 등급 | 비고 |
 |---|---|---|
-| `resident_reg_no` | G1 | 암호화해 저장. 응답에 원문을 담지 않는다 |
+| `ci`(연계정보) | G1 | 본인 확인 기관이 완료 결과로 돌려준다. 완료할 때 암호화해 저장하고, 어떤 응답에도 담지 않는다 |
 | 비밀번호, `password_hash` | G3 | 원래 값을 되살릴 수 없는 형태로만 저장. 어떤 응답에도 담지 않는다 |
 | `name`, `birth_date`, `phone`, `email`, `address` | G4 | 가입 신청 시 입력 |
 | `login_id` | — | 전체 계정에서 유일 |
@@ -42,12 +42,12 @@
 `POST /api/v1/signup`
 
 - 호출: 로그인하지 않은 사용자.
-- 입력: `login_id`, `password`, `name`, `birth_date`, `resident_reg_no`, `phone`, `email`, `address`.
+- 입력: `login_id`, `password`, `name`, `birth_date`, `phone`, `email`, `address`.
 - 해야 할 일:
   - `Customer` 한 건과 그에 연결된 `Account` 한 건을 만든다.
   - `role`은 `CUSTOMER`, `status`는 `PENDING_VERIFICATION`, `failed_login_count`는 0으로 서버가 정한다.
   - `account_id`, `customer_id`, `created_at`, `signup_ref`는 서버가 만든다.
-  - 비밀번호는 복원 불가 형태로, `resident_reg_no`는 암호화해 저장한다.
+  - 비밀번호는 복원 불가 형태로 저장한다.
 - 하면 안 되는 일:
   - 요청에 담긴 `role`, `status`, `account_id`, `customer_id`, `credit_status`, `collection_status`, `assigned_consultant_id`, `identity_verified_at`을 저장하거나 판단에 쓰는 것.
   - `login_id`가 이미 있으면 계정을 만들지 않는다. 거부 응답에 기존 계정의 정보를 담지 않는다.
@@ -73,9 +73,10 @@
 - 입력: 경로의 `verification_id`, 본문의 `agency_result_ref`.
 - 해야 할 일:
   - 서버가 외부 본인 확인 기관에 `agency_result_ref`의 결과를 직접 확인한다.
-  - 결과가 성공이고, 그 결과가 이 `verification_id`에 대해 발급된 것이며, 확인된 이름·생년월일·주민등록번호가 해당 가입 신청의 값과 같을 때만 계정을 `ACTIVE`로 바꾸고 `identity_verified_at`을 기록한다.
+  - 결과가 성공이고, 그 결과가 이 `verification_id`에 대해 발급된 것이며, 확인된 이름·생년월일이 해당 가입 신청의 값과 같고 결과에 `ci`가 담겨 있을 때만 계정을 `ACTIVE`로 바꾸고 `identity_verified_at`을 기록한다.
+  - 같은 처리에서 기관이 돌려준 `ci`를 암호화해 `Customer`에 저장한다.
 - 하면 안 되는 일:
-  - 요청에 담긴 확인 완료 표시, 이름, 생년월일, 주민등록번호, 결과 코드를 판단에 쓰는 것.
+  - 요청에 담긴 확인 완료 표시, 이름, 생년월일, `ci`, 결과 코드를 판단에 쓰거나 저장하는 것. `ci`를 응답·운영 기록·오류 응답에 담는 것.
   - 이미 쓴 결과, 다른 확인 요청의 결과, 유효 시간이 지난 요청으로 계정을 `ACTIVE`로 바꾸는 것.
 - 이미 완료(`COMPLETED`)된 `verification_id`로 완료를 다시 요청하면 거부한다(409). 계정 상태와 확인 요청 기록은 바뀌지 않는다.
 - 응답: `status`. 실패하면 계정 상태는 `PENDING_VERIFICATION`으로 남는다.
@@ -149,11 +150,11 @@
 2. 가입 직후 계정의 `status`는 `PENDING_VERIFICATION`이다. 요청 값으로 다른 상태의 계정을 만들 수 없다.
 3. `account_id`, `customer_id`, `role`, `status`, `failed_login_count`, `identity_verified_at`, `credit_status`, `collection_status`, `assigned_consultant_id`는 서버가 정한다. 요청에 담긴 값은 저장하지도, 판단에 쓰지도 않는다.
 4. `login_id`는 전체 계정에서 유일하다. 중복으로 거부한 응답에 기존 계정의 정보를 담지 않는다.
-5. 비밀번호는 원래 값을 되살릴 수 없는 형태로만, `resident_reg_no`는 암호화해 저장한다.
-6. 어떤 응답에도 비밀번호, `password_hash`, `resident_reg_no` 원문을 담지 않는다.
-7. 운영 기록과 오류 응답에 비밀번호와 `resident_reg_no` 원문을 남기지 않는다.
+5. 비밀번호는 원래 값을 되살릴 수 없는 형태로만 저장한다. 본인 확인 기관이 돌려준 `ci`는 본인 확인 완료 때 암호화해 저장한다.
+6. 어떤 응답에도 비밀번호, `password_hash`, `ci` 원문을 담지 않는다.
+7. 운영 기록과 오류 응답에 비밀번호와 `ci` 원문을 남기지 않는다.
 8. `PENDING_VERIFICATION` → `ACTIVE` 전이는 서버가 외부 본인 확인 기관에 직접 확인한 결과가 성공일 때만 일어난다. 클라이언트가 보낸 확인 완료 표시나 결과 값으로는 일어나지 않는다.
-9. 본인 확인 결과의 이름·생년월일·주민등록번호가 가입 신청 값과 다르면 계정을 `ACTIVE`로 바꾸지 않는다.
+9. 본인 확인 결과의 이름·생년월일이 가입 신청 값과 다르거나 결과에 `ci`가 없으면 계정을 `ACTIVE`로 바꾸지 않는다.
 10. 본인 확인 결과 하나는 그 결과를 요청한 `verification_id` 하나에 한 번만 쓴다. 유효 시간이 지난 확인 요청은 완료할 수 없다.
 11. 본인 확인 요청·완료는 `PENDING_VERIFICATION` 계정에만 적용된다. 다른 상태의 계정은 바뀌지 않는다.
 12. `ACTIVE` 계정만 로그인할 수 있다. `PENDING_VERIFICATION`, `LOCKED`, `SUSPENDED`, `DELETED` 계정의 로그인은 거부한다.

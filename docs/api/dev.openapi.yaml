@@ -91,8 +91,8 @@ paths:
       summary: 본인 확인 완료
       description: |
         서버가 외부 본인 확인 기관에 agency_result_ref의 결과를 직접 확인한다.
-        결과가 성공이고 이 verification_id에 대해 발급되었으며 대상자(이름·생년월일·주민등록번호)가 가입 신청 값과 같을 때만
-        계정을 ACTIVE로 바꾸고 identity_verified_at을 기록한다. 결과 하나는 한 번만 쓴다.
+        결과가 성공이고 이 verification_id에 대해 발급되었으며 대상자(이름·생년월일)가 가입 신청 값과 같고 결과에 연계정보(ci)가 있을 때만
+        계정을 ACTIVE로 바꾸고 identity_verified_at을 기록하며, ci를 암호화해 저장한다. ci는 응답에 담지 않는다. 결과 하나는 한 번만 쓴다.
       security: []
       x-allowed-roles: [ANONYMOUS]
       parameters:
@@ -802,13 +802,12 @@ components:
       type: object
       description: 아래 필드만 받는다. 정의되지 않은 필드(role, status, 식별자, 내부 정보 등)가 있으면 400
       additionalProperties: false
-      required: [login_id, password, name, birth_date, resident_reg_no, phone, email, address]
+      required: [login_id, password, name, birth_date, phone, email, address]
       properties:
         login_id: { type: string, minLength: 4, maxLength: 30 }
         password: { type: string, format: password }
         name: { type: string, maxLength: 50 }
         birth_date: { type: string, format: date }
-        resident_reg_no: { type: string, description: G1 }
         phone: { type: string, maxLength: 20 }
         email: { type: string, format: email, maxLength: 100 }
         address: { type: string, maxLength: 200 }
@@ -831,13 +830,12 @@ components:
 
     MyProfile:
       type: object
-      description: 본인(CUSTOMER) 응답. G5, assigned_consultant_id, password_hash는 담지 않는다
+      description: 본인(CUSTOMER) 응답. G5, assigned_consultant_id, password_hash, ci는 담지 않는다
       properties:
         customer_id: { $ref: '#/components/schemas/CustomerIdValue' }
         login_id: { type: string }
         name: { type: string }
         birth_date: { type: string, format: date }
-        resident_reg_no: { $ref: '#/components/schemas/MaskedString' }
         phone: { type: string }
         email: { type: string }
         address: { type: string }
@@ -855,7 +853,7 @@ components:
 
     ConsultantCustomerView:
       type: object
-      description: 상담원(배정 고객) 응답. resident_reg_no는 담지 않는다
+      description: 상담원(배정 고객) 응답. ci는 담지 않는다
       properties:
         customer_id: { $ref: '#/components/schemas/CustomerIdValue' }
         name: { $ref: '#/components/schemas/MaskedString' }
@@ -886,7 +884,7 @@ components:
 
     MemberDetail:
       type: object
-      description: 관리자 응답. password_hash와 resident_reg_no는 담지 않는다. DELETED 계정은 customer의 G1·G2·G3을 담지 않는다
+      description: 관리자 응답. password_hash와 ci는 담지 않는다. DELETED 계정은 customer의 G1·G2·G3을 담지 않는다
       properties:
         account_id: { type: string }
         login_id: { type: string }

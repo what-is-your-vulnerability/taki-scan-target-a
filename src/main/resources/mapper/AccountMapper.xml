@@ -13,7 +13,7 @@
     C.CUSTOMER_ID            AS C_CUSTOMER_ID,
     C.NAME                   AS C_NAME,
     C.BIRTH_DATE             AS C_BIRTH_DATE,
-    C.RESIDENT_REG_NO        AS C_RESIDENT_REG_NO,
+    C.CI                     AS C_CI,
     C.PHONE                  AS C_PHONE,
     C.EMAIL                  AS C_EMAIL,
     C.ADDRESS                AS C_ADDRESS,

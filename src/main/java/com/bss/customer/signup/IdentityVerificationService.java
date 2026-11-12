@@ -16,11 +16,13 @@ import com.bss.customer.account.AccountStatus;
 import com.bss.customer.common.ApiException;
 import com.bss.customer.crypto.FieldEncryptor;
 import com.bss.customer.customer.Customer;
+import com.bss.customer.customer.CustomerMapper;
 
 @Service
 public class IdentityVerificationService {
 
     private final AccountMapper accountMapper;
+    private final CustomerMapper customerMapper;
     private final IdentityVerificationMapper verificationMapper;
     private final AgencyClient agencyClient;
     private final FieldEncryptor fieldEncryptor;
@@ -28,12 +30,14 @@ public class IdentityVerificationService {
     private final Duration ttl;
 
     public IdentityVerificationService(AccountMapper accountMapper,
+                                       CustomerMapper customerMapper,
                                        IdentityVerificationMapper verificationMapper,
                                        AgencyClient agencyClient,
                                        FieldEncryptor fieldEncryptor,
                                        PlatformTransactionManager transactionManager,
                                        @Value("${app.identity.verification-ttl-minutes}") long ttlMinutes) {
         this.accountMapper = accountMapper;
+        this.customerMapper = customerMapper;
         this.verificationMapper = verificationMapper;
         this.agencyClient = agencyClient;
         this.fieldEncryptor = fieldEncryptor;
@@ -76,7 +80,9 @@ public class IdentityVerificationService {
         if (agencyResultRef == null || agencyResultRef.length() < 20 || !agencyResultRef.matches("[A-Za-z0-9_-]+")) {
             throw verificationRejected();
         }
-        transactionTemplate.executeWithoutResult(tx -> activate(verification, null, now));
+        AgencyResult result = agencyClient.fetchResult(agencyResultRef);
+        transactionTemplate.executeWithoutResult(tx -> activate(verification, null, member.getCustomerId(),
+                result == null ? null : result.ci(), now));
         return new VerificationCompleteResponse(AccountStatus.ACTIVE);
     }
 
@@ -84,15 +90,18 @@ public class IdentityVerificationService {
         if (result == null || !"SUCCESS".equals(result.outcome())) {
             return false;
         }
-        String agencyRegNo = result.residentRegNo() == null ? "" : result.residentRegNo().replace("-", "");
         return verificationId.equals(result.verificationId())
                 && customer.getName().equals(result.name())
                 && customer.getBirthDate().toString().equals(result.birthDate())
-                && fieldEncryptor.decrypt(customer.getResidentRegNo()).equals(agencyRegNo);
+                && result.ci() != null && !result.ci().isBlank();
     }
 
-    private void activate(IdentityVerification verification, String agencyResultRef, Instant now) {
+    private void activate(IdentityVerification verification, String agencyResultRef,
+                          Long customerId, String ci, Instant now) {
         try {
+            if (ci != null) {
+                customerMapper.updateCi(customerId, java.util.Base64.getEncoder().encodeToString(ci.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            }
             int completed = verificationMapper.markCompleted(verification.getVerificationId(), agencyResultRef, now);
             int activated = accountMapper.activateVerified(verification.getAccountId(), now);
             if (completed != 1 || activated != 1) {

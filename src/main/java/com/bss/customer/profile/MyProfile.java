@@ -10,7 +10,6 @@ public record MyProfile(
         String loginId,
         String name,
         LocalDate birthDate,
-        String residentRegNo,
         String phone,
         String email,
         String address,

@@ -19,6 +19,8 @@ public interface CustomerMapper {
                        @Param("address") String address,
                        @Param("updatedAt") Instant updatedAt);
 
+    void updateCi(@Param("customerId") long customerId, @Param("ci") String ci);
+
     List<Account> findAssigned(@Param("consultantId") String consultantId,
                                @Param("offset") int offset,
                                @Param("size") int size);

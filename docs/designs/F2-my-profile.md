@@ -5,7 +5,7 @@
 고객이 본인 고객정보를 확인하고 연락처·이메일·주소와 비밀번호를 바꾼다. 상담원은 배정된 고객의 정보를 마스킹 형태로 조회하고 연락처·이메일·주소를 수정 대행한다.
 
 대상: 본인 정보 조회·수정, 본인 비밀번호 변경, 상담원의 배정 고객 목록·검색·상세 조회·연락처 수정.
-범위 밖: 이름·생년월일·주민등록번호 변경, 상담원 배정 변경(F3), 탈퇴, 요금제·청구서·결제수단(F4~F6).
+범위 밖: 이름·생년월일 변경, 상담원 배정 변경(F3), 탈퇴, 요금제·청구서·결제수단(F4~F6).
 
 엔티티·필드·상태 이름은 `spec/data-model.md`를 따른다.
 
@@ -13,8 +13,8 @@
 
 | 역할 | 할 수 있다 | 할 수 없다 |
 |---|---|---|
-| `CUSTOMER` | 본인 정보 조회, 본인 `phone`·`email`·`address` 수정, 본인 비밀번호 변경 | 다른 고객 정보 조회·수정, 내부 정보(G5) 조회, 이름·생년월일·주민등록번호·역할·계정 상태 변경 |
-| `CONSULTANT` | 배정 고객 목록·상세 조회(마스킹), 배정 고객의 `phone`·`email`·`address` 수정, 본인 비밀번호 변경 | 미배정 고객 접근, 주민등록번호 조회, 마스킹 해제, 배정 변경 |
+| `CUSTOMER` | 본인 정보 조회, 본인 `phone`·`email`·`address` 수정, 본인 비밀번호 변경 | 다른 고객 정보 조회·수정, 내부 정보(G5) 조회, 이름·생년월일·역할·계정 상태 변경 |
+| `CONSULTANT` | 배정 고객 목록·상세 조회(마스킹), 배정 고객의 `phone`·`email`·`address` 수정, 본인 비밀번호 변경 | 미배정 고객 접근, 마스킹 해제, 배정 변경 |
 | `BILLING_OPERATOR`, `ADMIN` | 본인 비밀번호 변경 | 이 문서의 고객 조회·수정 API 사용 |
 
 - 배정 고객은 `Customer.assigned_consultant_id`가 요청 상담원의 `account_id`인 고객이다.
@@ -24,7 +24,7 @@
 
 | 자산 | 등급 |
 |---|---|
-| `resident_reg_no` | G1 |
+| `ci` | G1 |
 | 비밀번호, `password_hash` | G3 |
 | `name`, `birth_date`, `phone`, `email`, `address` | G4 |
 | `credit_status`, `collection_status` | G5 |
@@ -38,7 +38,7 @@
 | `customer_id` | 원문 | 원문 | — |
 | `name` | 원문 | 마스킹 | `홍*동` |
 | `birth_date` | 원문 | 마스킹 | `1990-**-**` |
-| `resident_reg_no` | 마스킹 | 미포함 | `900101-1******` |
+| `ci` | 미포함 | 미포함 | — |
 | `phone` | 원문 | 마스킹 | `010-1234-****` |
 | `email` | 원문 | 마스킹 | `ho***@example.com` |
 | `address` | 원문 | 마스킹 | `서울특별시 중구 ***` |
@@ -59,7 +59,7 @@
 - 호출: `CUSTOMER`.
 - 입력: 없음. 대상 고객은 로그인 계정의 `customer_id`다.
 - 해야 할 일: 3.1의 본인 열에 따른 필드와 `login_id`를 돌려준다.
-- 하면 안 되는 일: 경로·파라미터·본문·헤더에 담긴 고객 식별자로 대상을 정하는 것. G5, `assigned_consultant_id`, `password_hash`, `resident_reg_no` 원문을 담는 것.
+- 하면 안 되는 일: 경로·파라미터·본문·헤더에 담긴 고객 식별자로 대상을 정하는 것. G5, `assigned_consultant_id`, `password_hash`, `ci` 원문을 담는 것.
 
 ### 4.2 내 정보 수정
 
@@ -69,7 +69,7 @@
 - 입력: `phone`, `email`, `address` 중 바꿀 항목.
 - 해야 할 일: 로그인 계정의 고객에 대해 입력된 항목만 바꾸고 `updated_at`을 기록한다. 응답은 4.1과 같다.
 - 하면 안 되는 일:
-  - `name`, `birth_date`, `resident_reg_no`, `customer_id`, `credit_status`, `collection_status`, `assigned_consultant_id`, 계정의 `role`·`status`·`login_id`·`failed_login_count`를 바꾸는 것. 요청에 담겨 있으면 거부한다.
+  - `name`, `birth_date`, `ci`, `customer_id`, `credit_status`, `collection_status`, `assigned_consultant_id`, 계정의 `role`·`status`·`login_id`·`failed_login_count`를 바꾸는 것. 요청에 담겨 있으면 거부한다.
   - 형식이 맞지 않는 값을 저장하는 것. 거부하면 기존 값을 유지한다.
 
 ### 4.3 비밀번호 변경
@@ -106,7 +106,7 @@
 - 호출: `CONSULTANT`.
 - 입력: 경로의 `customer_id`.
 - 해야 할 일: 대상 고객이 요청 상담원의 배정 고객일 때만 3.1의 상담원 열에 따른 필드를 돌려준다. 감사 기록을 남긴다.
-- 하면 안 되는 일: 미배정 고객 정보를 돌려주는 것. `resident_reg_no`를 담는 것. G4를 마스킹 없이 담는 것.
+- 하면 안 되는 일: 미배정 고객 정보를 돌려주는 것. `ci`를 담는 것. G4를 마스킹 없이 담는 것.
 
 ### 4.6 배정 고객 연락처 수정
 
@@ -146,18 +146,18 @@
 1. `/api/v1/me/*`의 대상 고객·계정은 로그인 계정으로만 정한다. 요청에 담긴 고객·계정 식별자는 쓰지 않는다.
 2. 고객 계정이 아닌 계정(`customer_id` 없음)은 내 정보 조회·수정을 쓸 수 없다.
 3. 본인 수정은 `phone`, `email`, `address`만 바꾼다. 그 밖의 고객·계정 필드는 이 기능으로 바뀌지 않는다.
-4. 본인 조회·수정 응답에 `credit_status`, `collection_status`, `assigned_consultant_id`, `password_hash`를 담지 않는다. `resident_reg_no`는 마스킹 형태로만 담는다.
+4. 본인 조회·수정 응답에 `credit_status`, `collection_status`, `assigned_consultant_id`, `password_hash`, `ci`를 담지 않는다.
 5. 비밀번호 변경은 `current_password`가 저장된 비밀번호와 맞을 때만 일어난다.
 6. 비밀번호를 바꾸면 그 계정의 기존 로그인 상태는 모두 끝나고 `password_changed_at`이 기록된다.
 7. 상담원은 `assigned_consultant_id`가 본인 `account_id`인 고객만 조회·수정할 수 있다. 조회와 수정 모두 같은 기준을 쓴다.
 8. 상담원 목록에는 본인 배정 고객만, 목록 필드만 담는다.
-9. 상담원에게 가는 응답(목록·상세·수정 결과)은 `name`, `birth_date`, `phone`, `email`, `address`를 마스킹 형태로만 담고 `resident_reg_no`를 담지 않는다.
+9. 상담원에게 가는 응답(목록·상세·수정 결과)은 `name`, `birth_date`, `phone`, `email`, `address`를 마스킹 형태로만 담고 `ci`를 담지 않는다.
 10. 상담원 수정은 `phone`, `email`, `address`만 바꾼다.
 11. 배정이 바뀌면 이전 상담원은 다음 요청부터 그 고객을 조회·수정할 수 없다.
 12. 상담원의 고객정보 조회·수정은 행위자·시각·고객을 감사 기록에 남긴다. 거부된 요청도 `DENIED`로 남긴다.
 13. 없는 고객이나 미배정 고객 요청을 거부할 때, 응답은 그 고객의 존재 여부나 정보를 드러내지 않는다.
 14. 형식이 맞지 않는 입력은 거부하고, 거부하면 기존 값은 바뀌지 않는다.
-15. 운영 기록과 오류 응답에 비밀번호와 `resident_reg_no` 원문을 남기지 않는다.
+15. 운영 기록과 오류 응답에 비밀번호와 `ci` 원문을 남기지 않는다.
 16. 변경한 비밀번호도 가입 때(F1)와 같은 방식, 곧 원래 값을 되살릴 수 없는 형태로만 저장한다.
 17. 상담원 검색 결과에는 조건과 상관없이 요청 상담원에게 배정된 고객만 담긴다. 목록(4.4)과 같은 기준을 쓴다.
 18. 검색의 `name`은 이름에 그 글자가 그대로 들어 있는 고객을, `phone`은 숫자만 남긴 전화번호에 그 숫자가 들어 있는 고객을 찾는 데에만 쓰인다. 검색어나 `sort` 값이 다른 조건·다른 고객 정보 반환·데이터 변경으로 이어지지 않으며, `sort`는 정해진 값만 받는다.
