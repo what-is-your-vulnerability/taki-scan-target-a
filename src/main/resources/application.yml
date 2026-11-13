@@ -46,5 +46,7 @@ app:
     min-response-millis: 300
   export:
     dir: ${EXPORT_DIR:./export-tmp}
+  template:
+    dir: ${TEMPLATE_DIR:./response-templates}
   encryption:
     key: ${FIELD_ENCRYPTION_KEY}

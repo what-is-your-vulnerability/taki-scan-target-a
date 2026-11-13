@@ -18,6 +18,8 @@ tags:
     description: 내 고객정보 조회·수정
   - name: F3
     description: 관리자 회원 관리
+  - name: F9
+    description: 상담·관리 보조 기능
 
 paths:
   /signup:
@@ -715,6 +717,134 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /consultant/response-templates:
+    get:
+      tags: [F9]
+      summary: 문구 템플릿 조회
+      description: 문구 템플릿 폴더에 있는 해당 이름의 텍스트 파일 내용을 돌려준다.
+      x-allowed-roles: [CONSULTANT]
+      parameters:
+        - in: query
+          name: name
+          required: true
+          description: 템플릿 파일 이름(예 greeting.txt)
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '200':
+          description: 템플릿 내용
+          content:
+            text/plain:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/members/lookup:
+    get:
+      tags: [F9]
+      summary: 계정 아이디 검색
+      description: 로그인 아이디가 입력한 글자로 시작하는 계정을 최대 100건 돌려준다. DELETED 계정은 제외한다.
+      x-allowed-roles: [ADMIN]
+      parameters:
+        - in: query
+          name: login_id_prefix
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 30 }
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [login_id, created_at, status]
+            default: login_id
+      responses:
+        '200':
+          description: 검색 결과
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        account_id: { type: string }
+                        role: { $ref: '#/components/schemas/Role' }
+                        customer_id:
+                          allOf: [{ $ref: '#/components/schemas/CustomerIdValue' }]
+                          nullable: true
+                        name: { type: string, nullable: true }
+                        status: { $ref: '#/components/schemas/AccountStatus' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/agency/connectivity-check:
+    post:
+      tags: [F9]
+      summary: 본인 확인 기관 연결 점검
+      description: 서버 설정에 등록된 기관 주소에 요청을 보내 응답이 오는지 확인한다. 등록된 기관 주소가 아니면 400.
+      x-allowed-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [url]
+              properties:
+                url: { type: string, maxLength: 300 }
+      responses:
+        '200':
+          description: 점검 결과
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reachable: { type: boolean }
+                  status: { type: integer, nullable: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/customers/bulk-assignments:
+    post:
+      tags: [F9]
+      summary: 상담원 일괄 배정
+      description: |
+        요청 본문은 XML이다. assignments 아래 assignment 1~100개이고 각 assignment는 customer_id, consultant_id 요소를 가진다.
+        항목마다 상담원 배정(F3 4.8)과 같은 규칙으로 처리하고 항목별 결과를 돌려준다.
+      x-allowed-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema: { type: string }
+      responses:
+        '200':
+          description: 항목별 결과
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        customer_id: { type: integer, nullable: true }
+                        consultant_id: { type: string, nullable: true }
+                        ok: { type: boolean }
+                        error: { type: string, nullable: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
   securitySchemes:
